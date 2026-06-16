@@ -2,6 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -11,7 +18,10 @@ export const Route = createFileRoute("/")({
         content:
           "MONITOR translates monthly subscription overhead into a high-impact annual trajectory. Pure utility. Zero noise.",
       },
-      { property: "og:title", content: "MONITOR — The Pure Subscription Tracker" },
+      {
+        property: "og:title",
+        content: "MONITOR — The Pure Subscription Tracker",
+      },
       {
         property: "og:description",
         content:
@@ -27,7 +37,72 @@ export const Route = createFileRoute("/")({
 /* ────────────────────────────────────────────────────────────────────────── */
 
 type Category = "SAAS" | "ENTERTAINMENT" | "UTILITIES" | "STORAGE";
-const CATEGORIES: Category[] = ["SAAS", "ENTERTAINMENT", "UTILITIES", "STORAGE"];
+const CATEGORIES: Category[] = [
+  "SAAS",
+  "ENTERTAINMENT",
+  "UTILITIES",
+  "STORAGE",
+];
+type CurrencyCode = "USD" | "INR" | "EUR" | "GBP" | "CAD" | "AUD" | "JPY";
+type FormatCurrency = (n: number) => string;
+
+const CURRENCIES: {
+  code: CurrencyCode;
+  label: string;
+  locale: string;
+  fractionDigits: number;
+  sliderMax: number;
+}[] = [
+  {
+    code: "USD",
+    label: "USD",
+    locale: "en-US",
+    fractionDigits: 2,
+    sliderMax: 300,
+  },
+  {
+    code: "INR",
+    label: "INR",
+    locale: "en-IN",
+    fractionDigits: 2,
+    sliderMax: 25000,
+  },
+  {
+    code: "EUR",
+    label: "EUR",
+    locale: "de-DE",
+    fractionDigits: 2,
+    sliderMax: 300,
+  },
+  {
+    code: "GBP",
+    label: "GBP",
+    locale: "en-GB",
+    fractionDigits: 2,
+    sliderMax: 300,
+  },
+  {
+    code: "CAD",
+    label: "CAD",
+    locale: "en-CA",
+    fractionDigits: 2,
+    sliderMax: 400,
+  },
+  {
+    code: "AUD",
+    label: "AUD",
+    locale: "en-AU",
+    fractionDigits: 2,
+    sliderMax: 500,
+  },
+  {
+    code: "JPY",
+    label: "JPY",
+    locale: "ja-JP",
+    fractionDigits: 0,
+    sliderMax: 50000,
+  },
+];
 
 interface Sub {
   id: string;
@@ -46,6 +121,15 @@ const SEED: Sub[] = [
 ];
 
 const STORAGE_KEY = "monitor.subs.v1";
+const CURRENCY_STORAGE_KEY = "monitor.currency.v1";
+
+function isCurrencyCode(value: unknown): value is CurrencyCode {
+  return typeof value === "string" && CURRENCIES.some((c) => c.code === value);
+}
+
+function getCurrencyConfig(code: CurrencyCode) {
+  return CURRENCIES.find((c) => c.code === code) ?? CURRENCIES[0];
+}
 
 function loadSubs(): Sub[] {
   if (typeof window === "undefined") return SEED;
@@ -57,6 +141,16 @@ function loadSubs(): Sub[] {
     return parsed.filter(isValidSub);
   } catch {
     return SEED;
+  }
+}
+
+function loadCurrency(): CurrencyCode {
+  if (typeof window === "undefined") return "USD";
+  try {
+    const raw = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
+    return isCurrencyCode(raw) ? raw : "USD";
+  } catch {
+    return "USD";
   }
 }
 
@@ -72,14 +166,17 @@ function isValidSub(x: unknown): x is Sub {
   );
 }
 
-const fmt = (n: number) =>
-  n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  ODOMETER — rolling digit counter                                          */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-function Odometer({ value }: { value: number }) {
+function Odometer({
+  value,
+  formatCurrency,
+}: {
+  value: number;
+  formatCurrency: FormatCurrency;
+}) {
   const [display, setDisplay] = useState(0);
   const ref = useRef({ v: 0 });
   const flashRef = useRef<HTMLSpanElement>(null);
@@ -110,7 +207,7 @@ function Odometer({ value }: { value: number }) {
       className="font-display tabular-nums inline-block overflow-hidden"
       style={{ lineHeight: 0.9 }}
     >
-      ${fmt(display)}
+      {formatCurrency(display)}
     </span>
   );
 }
@@ -119,7 +216,13 @@ function Odometer({ value }: { value: number }) {
 /*  FORECAST CHART — animated SVG line graph (12-month compounding)          */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-function ForecastChart({ monthly }: { monthly: number }) {
+function ForecastChart({
+  monthly,
+  formatCurrency,
+}: {
+  monthly: number;
+  formatCurrency: FormatCurrency;
+}) {
   const W = 520;
   const H = 360;
   const PAD_L = 56;
@@ -137,7 +240,9 @@ function ForecastChart({ monthly }: { monthly: number }) {
     });
   }, [monthly]);
 
-  const path = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const path = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+    .join(" ");
   const area = `${path} L ${points[points.length - 1].x} ${H - PAD_B} L ${points[0].x} ${H - PAD_B} Z`;
 
   const pathRef = useRef<SVGPathElement>(null);
@@ -151,7 +256,20 @@ function ForecastChart({ monthly }: { monthly: number }) {
     );
   }, [monthly]);
 
-  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block">
@@ -185,7 +303,7 @@ function ForecastChart({ monthly }: { monthly: number }) {
             fontSize="10"
             fill="var(--color-muted-foreground)"
           >
-            ${fmt(v)}
+            {formatCurrency(v)}
           </text>
         );
       })}
@@ -232,7 +350,7 @@ function ForecastChart({ monthly }: { monthly: number }) {
         className="font-mono"
         fill="var(--color-primary)"
       >
-        ${fmt(points[11].v)}
+        {formatCurrency(points[11].v)}
       </text>
     </svg>
   );
@@ -247,11 +365,17 @@ function LedgerCard({
   index,
   onChange,
   onDelete,
+  currency,
+  formatCurrency,
+  feeMax,
 }: {
   sub: Sub;
   index: number;
   onChange: (s: Sub) => void;
   onDelete: (id: string) => void;
+  currency: CurrencyCode;
+  formatCurrency: FormatCurrency;
+  feeMax: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -268,7 +392,7 @@ function LedgerCard({
         ease: "cubic-bezier(0.25, 1, 0.5, 1)" as unknown as string,
       },
     );
-  }, []);
+  }, [index]);
 
   const handleDelete = () => {
     if (!ref.current) return;
@@ -295,7 +419,9 @@ function LedgerCard({
       {/* index gutter */}
       <div className="grid grid-cols-[64px_1fr]">
         <div className="border-r border-border flex flex-col items-center justify-center py-6">
-          <span className="font-mono text-[10px] text-muted-foreground">IDX</span>
+          <span className="font-mono text-[10px] text-muted-foreground">
+            IDX
+          </span>
           <span className="font-mono text-lg tabular-nums">
             {String(index + 1).padStart(2, "0")}
           </span>
@@ -326,20 +452,28 @@ function LedgerCard({
           <div>
             <div className="flex items-baseline justify-between mb-2">
               <label className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
-                MONTHLY_FEE // USD
+                MONTHLY_FEE // {currency}
               </label>
               <div className="flex items-baseline gap-4">
                 <span className="font-mono text-xs text-muted-foreground">
                   /mo&nbsp;
-                  <span className="text-foreground">${fmt(sub.fee)}</span>
+                  <span className="text-foreground">
+                    {formatCurrency(sub.fee)}
+                  </span>
                 </span>
                 <span className="font-mono text-xs">
                   /yr&nbsp;
-                  <span className="text-primary">${fmt(sub.fee * 12)}</span>
+                  <span className="text-primary">
+                    {formatCurrency(sub.fee * 12)}
+                  </span>
                 </span>
               </div>
             </div>
-            <FeeSlider value={sub.fee} onChange={(v) => onChange({ ...sub, fee: v })} />
+            <FeeSlider
+              value={sub.fee}
+              max={feeMax}
+              onChange={(v) => onChange({ ...sub, fee: v })}
+            />
           </div>
 
           {/* row 3: category presets */}
@@ -416,12 +550,14 @@ function FocusInput({
 
 function FeeSlider({
   value,
+  max,
   onChange,
 }: {
   value: number;
+  max: number;
   onChange: (v: number) => void;
 }) {
-  const max = 300;
+  const fill = Math.min((value / max) * 100, 100);
   return (
     <div className="flex items-center gap-3">
       <input
@@ -433,7 +569,7 @@ function FeeSlider({
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="monitor-range flex-1"
         style={{
-          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${(value / max) * 100}%, var(--color-border) ${(value / max) * 100}%, var(--color-border) 100%)`,
+          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${fill}%, var(--color-border) ${fill}%, var(--color-border) 100%)`,
         }}
       />
       <input
@@ -447,19 +583,71 @@ function FeeSlider({
   );
 }
 
+function CurrencySelect({
+  value,
+  onChange,
+}: {
+  value: CurrencyCode;
+  onChange: (currency: CurrencyCode) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+        BASE_CCY
+      </label>
+      <Select
+        value={value}
+        onValueChange={(next) => {
+          if (isCurrencyCode(next)) onChange(next);
+        }}
+      >
+        <SelectTrigger
+          aria-label="Base currency"
+          className="h-8 w-[94px] rounded-none border-border bg-background px-2 py-0 font-mono text-[10px] tracking-[0.18em] text-foreground shadow-none focus:ring-1 focus:ring-primary [&>svg]:text-primary [&>svg]:opacity-100"
+        >
+          <span>{value}</span>
+        </SelectTrigger>
+        <SelectContent className="rounded-none border-border bg-card font-mono text-[10px] tracking-[0.18em] text-foreground shadow-none">
+          {CURRENCIES.map((currency) => (
+            <SelectItem
+              key={currency.code}
+              value={currency.code}
+              className="rounded-none py-2 pl-2 pr-8 text-[10px] tracking-[0.18em] focus:bg-primary focus:text-primary-foreground"
+            >
+              {currency.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  MAIN APP                                                                  */
 /* ────────────────────────────────────────────────────────────────────────── */
 
 function Index() {
   const [subs, setSubs] = useState<Sub[]>(SEED);
+  const [currency, setCurrency] = useState<CurrencyCode>("USD");
   const [hydrated, setHydrated] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const currencyConfig = useMemo(() => getCurrencyConfig(currency), [currency]);
+  const formatCurrency = useMemo(() => {
+    const formatter = new Intl.NumberFormat(currencyConfig.locale, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: currencyConfig.fractionDigits,
+      maximumFractionDigits: currencyConfig.fractionDigits,
+    });
+    return (value: number) => formatter.format(value);
+  }, [currency, currencyConfig]);
 
   // hydrate from localStorage on mount (client only)
   useEffect(() => {
     setSubs(loadSubs());
+    setCurrency(loadCurrency());
     setHydrated(true);
   }, []);
 
@@ -473,6 +661,15 @@ function Index() {
     }
   }, [subs, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
+    } catch {
+      // quota / disabled — silent
+    }
+  }, [currency, hydrated]);
+
   const flash = (msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2200);
@@ -483,6 +680,7 @@ function Index() {
       app: "MONITOR",
       version: 1,
       exportedAt: new Date().toISOString(),
+      currency,
       subscriptions: subs,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -507,6 +705,9 @@ function Index() {
       if (!Array.isArray(list)) throw new Error("invalid");
       const cleaned = list.filter(isValidSub);
       if (!cleaned.length) throw new Error("empty");
+      if (!Array.isArray(data) && isCurrencyCode(data?.currency)) {
+        setCurrency(data.currency);
+      }
       setSubs(cleaned);
       flash(`IMPORT_OK // ${cleaned.length} RECORDS`);
     } catch {
@@ -611,17 +812,22 @@ function Index() {
 
       {/* TOP BAR */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-10 min-h-14 py-3 md:h-14 md:py-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="w-2 h-2 bg-primary" />
-            <span className="font-display text-sm tracking-[0.18em]">MONITOR</span>
-            <span className="font-mono text-[10px] text-muted-foreground tracking-[0.18em]">
+            <span className="font-display text-sm tracking-[0.18em]">
+              MONITOR
+            </span>
+            <span className="hidden sm:inline font-mono text-[10px] text-muted-foreground tracking-[0.18em]">
               v1.0 // PURE SUBSCRIPTION TRACKER
             </span>
           </div>
-          <div className="flex items-center gap-6 font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+            <CurrencySelect value={currency} onChange={setCurrency} />
             <span>SYS_TIME // {new Date().toISOString().slice(0, 10)}</span>
-            <span className="hidden md:inline">SIGNAL // <span className="text-primary">●</span> ONLINE</span>
+            <span className="hidden md:inline">
+              SIGNAL // <span className="text-primary">●</span> ONLINE
+            </span>
           </div>
         </div>
         <div className="calibrate-line h-px hairline w-full" />
@@ -642,12 +848,14 @@ function Index() {
           </div>
 
           <h1 className="font-display font-bold mt-8 calibrate-fade text-[clamp(2rem,5vw,4rem)] leading-[0.95] tracking-[-0.02em] uppercase">
-            Total Annual<br />Overhead
+            Total Annual
+            <br />
+            Overhead
           </h1>
 
           <div className="mt-8 calibrate-fade">
             <div className="font-display font-extrabold text-[clamp(4rem,14vw,11rem)] leading-[0.85]">
-              <Odometer value={totalAnnual} />
+              <Odometer value={totalAnnual} formatCurrency={formatCurrency} />
             </div>
           </div>
 
@@ -656,18 +864,34 @@ function Index() {
           {/* KPI ROW */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border mt-px">
             {[
-              { l: "MONTHLY_BURN", v: `$${fmt(totalMonthly)}`, s: "/mo" },
-              { l: "WEEKLY_AVG", v: `$${fmt(totalMonthly / 4.345)}`, s: "/wk" },
-              { l: "DAILY_AVG", v: `$${fmt(totalMonthly / 30.44)}`, s: "/day" },
-              { l: "5_YEAR_PROJ", v: `$${fmt(totalAnnual * 5)}`, s: "/5yr" },
+              { l: "MONTHLY_BURN", v: formatCurrency(totalMonthly), s: "/mo" },
+              {
+                l: "WEEKLY_AVG",
+                v: formatCurrency(totalMonthly / 4.345),
+                s: "/wk",
+              },
+              {
+                l: "DAILY_AVG",
+                v: formatCurrency(totalMonthly / 30.44),
+                s: "/day",
+              },
+              {
+                l: "5_YEAR_PROJ",
+                v: formatCurrency(totalAnnual * 5),
+                s: "/5yr",
+              },
             ].map((k) => (
               <div key={k.l} className="bg-background px-4 py-5 calibrate-fade">
                 <div className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
                   {k.l}
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="font-display text-2xl md:text-3xl tabular-nums">{k.v}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground">{k.s}</span>
+                  <span className="font-display text-2xl md:text-3xl tabular-nums">
+                    {k.v}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {k.s}
+                  </span>
                 </div>
               </div>
             ))}
@@ -720,6 +944,9 @@ function Index() {
                 index={i}
                 onChange={updateSub}
                 onDelete={deleteSub}
+                currency={currency}
+                formatCurrency={formatCurrency}
+                feeMax={currencyConfig.sliderMax}
               />
             ))}
 
@@ -740,21 +967,26 @@ function Index() {
                 <span className="w-1.5 h-1.5 bg-primary" />
               </div>
               <div className="p-5">
-                <ForecastChart monthly={totalMonthly} />
+                <ForecastChart
+                  monthly={totalMonthly}
+                  formatCurrency={formatCurrency}
+                />
               </div>
               <div className="border-t border-border grid grid-cols-2">
                 <div className="px-5 py-4 border-r border-border">
                   <div className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
                     M01_BASELINE
                   </div>
-                  <div className="font-display text-xl mt-1">${fmt(totalMonthly)}</div>
+                  <div className="font-display text-xl mt-1">
+                    {formatCurrency(totalMonthly)}
+                  </div>
                 </div>
                 <div className="px-5 py-4">
                   <div className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
                     M12_TERMINAL
                   </div>
                   <div className="font-display text-xl mt-1 text-primary">
-                    ${fmt(totalAnnual)}
+                    {formatCurrency(totalAnnual)}
                   </div>
                 </div>
               </div>
@@ -771,9 +1003,11 @@ function Index() {
                   return (
                     <div key={b.c}>
                       <div className="flex justify-between font-mono text-[11px] mb-1">
-                        <span className="text-muted-foreground tracking-[0.18em]">{b.c}</span>
+                        <span className="text-muted-foreground tracking-[0.18em]">
+                          {b.c}
+                        </span>
                         <span className="tabular-nums">
-                          ${fmt(b.total)}{" "}
+                          {formatCurrency(b.total)}{" "}
                           <span className="text-muted-foreground">
                             ({pct.toFixed(1)}%)
                           </span>
@@ -784,7 +1018,8 @@ function Index() {
                           className="absolute inset-y-0 left-0 bg-primary"
                           style={{
                             width: `${pct}%`,
-                            transition: "width 600ms cubic-bezier(0.25, 1, 0.5, 1)",
+                            transition:
+                              "width 600ms cubic-bezier(0.25, 1, 0.5, 1)",
                           }}
                         />
                       </div>
@@ -802,7 +1037,9 @@ function Index() {
         <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-primary" />
-            <span className="font-display tracking-[0.18em] text-sm">MONITOR</span>
+            <span className="font-display tracking-[0.18em] text-sm">
+              MONITOR
+            </span>
             <span className="font-mono text-[10px] text-muted-foreground">
               // PURE. ANALYTICAL. WEIGHTED.
             </span>
@@ -817,7 +1054,9 @@ function Index() {
       {toast && (
         <div
           className="fixed bottom-6 right-6 z-50 border border-primary bg-background/95 backdrop-blur px-4 py-3 font-mono text-[11px] tracking-[0.18em] text-primary shadow-lg"
-          style={{ animation: "monitor-toast 220ms cubic-bezier(0.25,1,0.5,1)" }}
+          style={{
+            animation: "monitor-toast 220ms cubic-bezier(0.25,1,0.5,1)",
+          }}
         >
           {toast}
         </div>
