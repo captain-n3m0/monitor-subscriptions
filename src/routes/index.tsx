@@ -12,20 +12,39 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MONITOR — The Pure Subscription Tracker" },
+      {
+        title:
+          "Free SaaS Subscription Cost Calculator | Annual Subscription Overhead",
+      },
       {
         name: "description",
         content:
-          "MONITOR translates monthly subscription overhead into a high-impact annual trajectory. Pure utility. Zero noise.",
+          "Use MONITOR to calculate monthly subscription costs, annual SaaS spend, and hidden recurring subscription overhead. Private, browser-only, and free.",
       },
       {
         property: "og:title",
-        content: "MONITOR — The Pure Subscription Tracker",
+        content:
+          "Free SaaS Subscription Cost Calculator | Annual Subscription Overhead",
       },
       {
         property: "og:description",
         content:
-          "MONITOR translates monthly subscription overhead into a high-impact annual trajectory. Pure utility. Zero noise.",
+          "Calculate annual SaaS spend, monthly subscription burn, and hidden recurring expenses with a private browser-based tracker.",
+      },
+      {
+        name: "twitter:title",
+        content:
+          "Free SaaS Subscription Cost Calculator | Annual Subscription Overhead",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Calculate annual SaaS spend, monthly subscription burn, and hidden recurring expenses with a private browser-based tracker.",
+      },
+      {
+        name: "keywords",
+        content:
+          "subscription cost calculator, SaaS subscription tracker, annual SaaS spend, monthly subscription calculator, recurring expenses calculator, subscription overhead",
       },
     ],
   }),
@@ -103,6 +122,65 @@ const CURRENCIES: {
     sliderMax: 50000,
   },
 ];
+
+const SEO_FAQ_ITEMS = [
+  {
+    question: "Is my financial data safe in this subscription tracker?",
+    answer:
+      "Yes. MONITOR stores subscription records in localStorage, which means the data stays in your browser and is not sent to a server by this app.",
+  },
+  {
+    question: "How do I calculate annual subscription overhead?",
+    answer:
+      "Add every monthly subscription fee together, then multiply that monthly total by 12. For annual plans, divide the yearly price by 12 if you want a monthly burn rate.",
+  },
+  {
+    question: "What counts as hidden subscription burn?",
+    answer:
+      "Hidden burn includes small recurring charges that are easy to forget, such as streaming apps, cloud storage, app trials that converted, software seats, and utilities billed automatically.",
+  },
+  {
+    question: "Should I track monthly billing or annual billing?",
+    answer:
+      "Track both. Monthly billing shows your current cash flow, while annual billing shows the real long-term cost of SaaS tools and subscriptions over a full year.",
+  },
+] as const;
+
+const SEO_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "MONITOR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      description:
+        "A free browser-based SaaS subscription cost calculator for estimating monthly burn, annual subscription overhead, and hidden recurring expenses.",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+      featureList: [
+        "Monthly subscription cost calculator",
+        "Annual SaaS spend projection",
+        "Category breakdown for recurring expenses",
+        "Local browser storage for private tracking",
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: SEO_FAQ_ITEMS.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.answer,
+        },
+      })),
+    },
+  ],
+};
 
 interface Sub {
   id: string;
@@ -623,6 +701,122 @@ function CurrencySelect({
   );
 }
 
+function SeoContent() {
+  return (
+    <section className="border-t border-border bg-background">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-16">
+        <div className="flex items-center gap-3 mb-10">
+          <span className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+            [004] // SUBSCRIPTION_COST_GUIDE
+          </span>
+          <span className="flex-1 h-px hairline" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
+          <article className="max-w-3xl">
+            <h2 className="font-display text-3xl md:text-5xl leading-tight uppercase">
+              How to Calculate Your Annual SaaS and Subscription Overhead
+            </h2>
+            <p className="mt-6 text-base leading-7 text-muted-foreground">
+              Subscription overhead is the total cost of recurring tools,
+              software, utilities, storage, and entertainment services over
+              time. A monthly fee can look harmless in isolation, but a stack of
+              small recurring charges can quietly become a large annual expense.
+            </p>
+            <p className="mt-4 text-base leading-7 text-muted-foreground">
+              To estimate your true annual SaaS spend, list every active
+              subscription, enter the current monthly fee, and group each item
+              by category. The calculator turns that ledger into monthly burn,
+              weekly average, daily average, and a five-year projection so the
+              recurring cost is easier to audit.
+            </p>
+
+            <div className="my-8 border border-border bg-card p-5">
+              <h3 className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+                SUBSCRIPTION_OVERHEAD_FORMULA
+              </h3>
+              <p className="mt-3 font-mono text-sm md:text-base text-foreground">
+                Annual overhead = monthly subscription total x 12
+              </p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                For annual plans, divide the yearly renewal by 12 to compare it
+                against monthly billing. For monthly plans, multiply by 12 to
+                reveal the real yearly cost.
+              </p>
+            </div>
+
+            <h3 className="font-display text-2xl mt-10 uppercase">
+              Monthly Billing vs Annual Billing
+            </h3>
+            <p className="mt-4 text-base leading-7 text-muted-foreground">
+              Monthly billing is useful for cash-flow planning because it shows
+              what leaves your account each month. Annual billing is useful for
+              budget planning because it shows the full cost of keeping a tool
+              or service for a complete year. Tracking both views prevents a
+              discount from hiding a renewal you no longer need.
+            </p>
+
+            <h3 className="font-display text-2xl mt-10 uppercase">
+              Find Hidden Burn Before It Compounds
+            </h3>
+            <p className="mt-4 text-base leading-7 text-muted-foreground">
+              Hidden burn usually comes from subscriptions that are too small to
+              question: a forgotten streaming app, an extra cloud storage tier,
+              an old software seat, or a free trial that converted. Reviewing
+              these recurring expenses every month can save hundreds of dollars
+              a year without changing anything important.
+            </p>
+          </article>
+
+          <aside className="border border-border bg-card self-start">
+            <div className="border-b border-border px-5 py-3 font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+              QUICK_AUDIT_CHECKLIST
+            </div>
+            <ol className="divide-y divide-border">
+              {[
+                "List every recurring app, tool, storage plan, and utility.",
+                "Normalize annual renewals into a monthly equivalent.",
+                "Group expenses by SaaS, entertainment, utilities, and storage.",
+                "Review unused subscriptions before the next renewal date.",
+              ].map((item, index) => (
+                <li key={item} className="flex gap-4 px-5 py-4">
+                  <span className="font-mono text-xs text-primary">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="text-sm leading-6 text-muted-foreground">
+                    {item}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </aside>
+        </div>
+
+        <div className="mt-16">
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="font-display text-2xl md:text-3xl uppercase">
+              Subscription Cost Calculator FAQ
+            </h2>
+            <span className="flex-1 h-px hairline" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-border">
+            {SEO_FAQ_ITEMS.map((item) => (
+              <div key={item.question} className="bg-background p-5">
+                <h3 className="font-mono text-[11px] tracking-[0.18em] text-foreground">
+                  {item.question}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  {item.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  MAIN APP                                                                  */
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -765,6 +959,10 @@ function Index() {
 
   return (
     <div ref={rootRef} className="min-h-screen bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(SEO_JSON_LD) }}
+      />
       <input
         ref={fileRef}
         type="file"
@@ -848,10 +1046,14 @@ function Index() {
           </div>
 
           <h1 className="font-display font-bold mt-8 calibrate-fade text-[clamp(2rem,5vw,4rem)] leading-[0.95] tracking-[-0.02em] uppercase">
-            Total Annual
+            Subscription Cost
             <br />
-            Overhead
+            Calculator
           </h1>
+          <p className="mt-5 max-w-2xl font-mono text-xs leading-6 tracking-[0.08em] text-muted-foreground calibrate-fade">
+            CALCULATE_ANNUAL_SAAS_SPEND // TRACK_MONTHLY_BURN //
+            FIND_HIDDEN_RECURRING_COSTS
+          </p>
 
           <div className="mt-8 calibrate-fade">
             <div className="font-display font-extrabold text-[clamp(4rem,14vw,11rem)] leading-[0.85]">
@@ -1031,6 +1233,8 @@ function Index() {
           </aside>
         </div>
       </section>
+
+      <SeoContent />
 
       {/* FOOTER */}
       <footer className="border-t border-border">
